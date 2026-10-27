@@ -1,60 +1,41 @@
-# ReelTogether — Full-Stack Watch Party
+# ReelTogether — PostgreSQL Edition
 
-A responsive **movie streaming and synchronized watch-party application** built with Node.js, Express, Socket.IO, and vanilla JavaScript. It supports **your own or licensed video files**. It does not include copyrighted films, third-party catalog scraping, DRM circumvention, or unauthorized redistribution.
-
-## Features
-- Browse a local movie library; HTTP byte-range streaming enables seeking without downloading the whole video.
-- Host public or invite-only watch parties; share links to watch together.
-- Real-time room chat, presence, and synchronized playback with host-controlled play/pause/seek.\n- Everyone can independently adjust their own video volume or mute; these audio settings never affect other viewers. Guests can use the native video volume control while playback remains host-authoritative.
-- Host migration when the host disconnects; 100-message in-memory chat history per room.
-- Responsive dark theater interface; optional admin-key-protected video uploads via API.
-- Node unit tests, input validation, basic rate limiting, Helmet HTTP headers.
-- Zero database required for the MVP; room state is in-memory and resets on restart.
+A full-stack watch-party app with persistent accounts, movie watch history, and room settings.
 
 ## Requirements
-Node.js 20+ and npm. Modern Chrome/Firefox/Edge/Safari browser. MP4 (H.264/AAC) is the most broadly compatible format.
 
-## Start
-```bash
-cp .env.example .env
-npm install
-npm test
-npm start
-```
-Windows PowerShell: `Copy-Item .env.example .env`.
-Open **http://127.0.0.1:3000**.
+- Node.js 20+ and PostgreSQL 15+
+- Your own authorized MP4/WebM files in `media/`
 
-1. Place a video you own or have permission to share in `media/` (e.g. `my-film.mp4`).
-2. Click **Refresh**, select the film, enter a nickname and click **Create watch party**.
-3. Click **Copy invite** and send the link to a friend. Both users must be able to reach the same server.
-4. Host controls playback; other viewers stay synchronized and can chat.
+## Quick start
 
-## Optional video upload
-Set `UPLOAD_KEY` in `.env` to a strong secret and restart. Upload using:
-```bash
-curl -X POST -H "x-upload-key: YOUR_SECRET" -F "movie=@your-video.mp4" http://127.0.0.1:3000/api/upload
-```
-Uploads are disabled without `UPLOAD_KEY`. Files are stored on disk and are not transcoded.
+1. Create an empty PostgreSQL database called `reeltogether` (for example, `createdb reeltogether`).
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` and a stable random `APP_SECRET` (32+ characters).
+3. Run `npm install` then `npm start`.
+4. Visit `http://127.0.0.1:3000`, register an account, and create a watch room.
 
-## Important deployment and security notes
-- **Local development by default:** `HOST=127.0.0.1`. For a LAN, set `HOST=0.0.0.0`. For remote friends, use a trusted HTTPS reverse proxy (e.g. Caddy) with a properly configured firewall.
-- **This is a portfolio-ready MVP, not a hardened public streaming service.** Video URLs are accessible to anyone who can reach the server and knows a filename; room privacy controls only room participation, **not video access**. Do not expose confidential or restricted media.
-- Invites grant access to private rooms. Treat invite links as secrets. Host control is issued via a host key stored only in the creator's tab.
-- For internet deployment, add account authentication, per-video authorization, secure cookies, persistent database storage, durable object storage, transcoding/HLS, moderation, HTTPS, CSRF protections for authenticated endpoints, observability, backups, and a Redis Socket.IO adapter for horizontal scaling.
-- Socket.IO generally uses WebSockets with HTTP long-polling fallback.
-- HTML5 video support varies by codec; use browser-compatible encoding.
-- This app streams **self-hosted video**; it does not synchronize Netflix, Disney+, or other DRM-protected providers.
-- Keep your `.env` private and do not commit media you lack rights to distribute.
+The server automatically creates the `users`, `sessions`, `rooms`, and `watch_history` tables on startup. Existing rooms, title, public/private visibility, and last playback state persist across server restarts. Active viewer lists and chat messages are in-memory only.
 
-## Architecture
-```
-Browser (HTML/CSS/JS)
-  | REST: /api/movies, /api/rooms, /api/stream/:name (HTTP Range)
-  | Socket.IO: room:join, chat:send, playback:update
-Express + Socket.IO server
-  | media/ video files
-  | in-memory watch-party state and chat history
-```
+## Database-backed features
 
-## Resume description
-Developed a full-stack watch-party application using Node.js, Express, and Socket.IO, featuring HTTP byte-range video streaming, room-based real-time chat, synchronized playback controls, and shareable private invites. Designed a responsive frontend and implemented server-side validation, rate limiting, and automated unit tests.
+- **Accounts:** unique usernames and scrypt-hashed passwords; random 30-day session tokens stored as SHA-256 hashes in PostgreSQL and sent as HTTP-only cookies.
+- **Watch history:** records movies and playback positions when a signed-in viewer joins a room and when the host updates playback. Access your own history with `GET /api/history`.
+- **Room settings:** signed-in room owners can edit title and public/invite-only visibility, saved to PostgreSQL using `PATCH /api/rooms/:room`. The interface has a Save room title & visibility button.
+- **Rooms:** persistent metadata and playback state. Active viewers and live chat remain in memory.
+- **Host controls:** host playback and seeking sync to guests; every viewer controls their own audio volume. Video uses `object-fit: contain` to avoid cropping.
+
+## Important notes
+
+- Room links depend on `APP_SECRET`; keep it unchanged across restarts. A newly started server will restore rooms on demand.
+- The room owner can regain host control by signing in and joining their room. If the host disconnects, a temporary host may be promoted for the active session.
+- This remains a portfolio MVP, **not a production-secure streaming service**. Direct `/api/stream/:name` URLs are not access-controlled; uploaded video access is not private. Do not host copyrighted media without authorization. Add per-video access control, CSRF protection, login throttling, robust validation, observability, backups, and HTTPS before public deployment.
+- Cookies default to `SameSite=Lax`; set `COOKIE_SECURE=true` behind HTTPS. Do not commit `.env`, passwords, or media files.
+- Socket.IO state is in-process and not horizontally scalable without a shared adapter. Room chat is not persisted.
+
+## Useful endpoints
+
+`POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/history`, `GET /api/movies`, `GET /api/rooms`, `POST /api/rooms`, `GET /api/rooms/:room`, `PATCH /api/rooms/:room`.
+
+## Testing
+
+Run `npm test` for the original core unit tests. Run `node --check server/index.js` and `node --check public/app.js` for syntax checks. Database-backed integration tests require a running PostgreSQL instance.

@@ -23,3 +23,5 @@
 @media (max-width: 700px) {
   .screen { max-width: 100%; }
 }
+
+.authbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.authbar input{flex:1;min-width:150px}.authbar button{white-space:nowrap}#history{font-size:.85rem;margin-top:8px}
