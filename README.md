@@ -5,7 +5,7 @@ A responsive **movie streaming and synchronized watch-party application** built 
 ## Features
 - Browse a local movie library; HTTP byte-range streaming enables seeking without downloading the whole video.
 - Host public or invite-only watch parties; share links to watch together.
-- Real-time room chat, presence, and synchronized playback with host-controlled play/pause/seek.
+- Real-time room chat, presence, and synchronized playback with host-controlled play/pause/seek.\n- Everyone can independently adjust their own video volume or mute; these audio settings never affect other viewers. Guests can use the native video volume control while playback remains host-authoritative.
 - Host migration when the host disconnects; 100-message in-memory chat history per room.
 - Responsive dark theater interface; optional admin-key-protected video uploads via API.
 - Node unit tests, input validation, basic rate limiting, Helmet HTTP headers.
