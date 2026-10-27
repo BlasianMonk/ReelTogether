@@ -36,3 +36,12 @@ for(const evt of ['play','pause','seeked'])$('video').addEventListener(evt,()=>{
 });
 $('video').addEventListener('timeupdate',()=>{if(isHost&&!remote&&Date.now()-lastSent>12000)sendState();});
 loadMovies();
+
+// Match the theater to the actual video's dimensions (16:9, 4:3, ultrawide, portrait).
+// object-fit: contain guarantees the full frame remains visible.
+$('video').addEventListener('loadedmetadata', () => {
+  const v = $('video');
+  if (v.videoWidth > 0 && v.videoHeight > 0) {
+    document.querySelector('.screen').style.setProperty('--movie-aspect', `${v.videoWidth} / ${v.videoHeight}`);
+  }
+});
